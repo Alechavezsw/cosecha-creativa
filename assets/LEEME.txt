@@ -1,0 +1,5 @@
+avatar.png    foto del locutor: se carga sola al arrancar
+invitado.png  foto del invitado (opcional): si existe, entra al plato
+
+Tambien se puede arrastrar cualquier imagen sobre la ventana (locutor)
+o cargar el invitado con el boton de las dos siluetas (tecla G).

@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Cosecha Creativa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./src/styles.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+
+  <div class="vignette" aria-hidden="true"></div>
+
+  <header class="hud hud-top">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <div>
+        <h1>Cosecha Creativa</h1>
+        <p>cosechacreativa.com.ar</p>
+      </div>
+    </div>
+
+  </header>
+
+  <!-- Rótulo de directo: sobrevive a «ocultar interfaz» para poder grabar. -->
+  <aside class="corner">
+    <div class="rec-pill" id="recPill" hidden><i class="rec-dot"></i><span id="recTime">0:00</span></div>
+
+    <div class="live-card">
+      <div class="live-photo" id="livePhoto" aria-hidden="true"></div>
+      <div class="live-text">
+        <span class="live-status"><i class="live-dot"></i>EN VIVO</span>
+        <strong class="live-name" id="liveName">Ale Chávez</strong>
+      </div>
+    </div>
+
+    <div class="meter hideable" id="meter" title="Nivel de entrada">
+      <span class="meter-label" id="sourceLabel">En reposo</span>
+      <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
+      <div class="bands">
+        <span class="band" id="bandBass">GRAVES</span>
+        <span class="band" id="bandMid">MEDIOS</span>
+        <span class="band" id="bandTreble">AGUDOS</span>
+      </div>
+    </div>
+  </aside>
+
+  <p class="captions" id="captions" aria-live="polite">
+    <span class="captions-source"></span>
+    <span class="captions-translation" hidden></span>
+  </p>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <footer class="hud hud-bottom">
+    <div class="panel" id="controlsPanel">
+    <button class="panel-toggle" id="btnPanel" type="button" aria-expanded="true" aria-controls="panelBody" title="Plegar menú (U)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
+      <span class="panel-toggle-label" id="panelToggleLabel">Ocultar menú</span>
+    </button>
+    <div class="panel-body" id="panelBody">
+    <div class="row">
+      <div class="segmented" id="modeSwitch" role="group" aria-label="Modo de visualización">
+        <button class="seg" type="button" data-mode="voice" aria-pressed="true">Voz</button>
+        <button class="seg" type="button" data-mode="rhythm" aria-pressed="false">Ritmo</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="group">
+        <button class="btn btn-primary" id="btnMic">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+          <span>Micrófono</span>
+        </button>
+        <button class="btn" id="btnFile">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>
+          <span>Audio</span>
+        </button>
+        <button class="btn" id="btnTab" title="Capturar el audio de una pestaña: YouTube, Spotify… (T)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 20.5h8M12 17.5v3"/></svg>
+          <span>Pestaña</span>
+        </button>
+        <button class="btn" id="btnDemo" title="Pista de demostración (D)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-4M8 18V6M12 20V4M16 17V7M20 13v-2"/></svg>
+          <span>Demo</span>
+        </button>
+        <button class="btn btn-icon" id="btnPlay" disabled title="Reproducir / pausar (Espacio)">
+          <svg viewBox="0 0 24 24" aria-hidden="true" id="iconPlay"><path d="M7 4.5v15l13-7.5-13-7.5Z" fill="currentColor" stroke="none"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" id="iconPause" hidden><path d="M8 4.5v15M16 4.5v15"/></svg>
+        </button>
+        <button class="btn btn-icon" id="btnCaptions" title="Subtítulos en vivo (C)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M9 10.5a2.2 2.2 0 1 0 0 3M16.5 10.5a2.2 2.2 0 1 0 0 3"/></svg>
+        </button>
+        <button class="btn btn-icon rec" id="btnRec" title="Grabar vídeo (R)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="btn btn-icon danger" id="btnStop" disabled title="Detener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></svg>
+        </button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="group sliders">
+        <label class="slider">
+          <span>Ganancia</span>
+          <input type="range" id="gain" min="0.4" max="3.5" step="0.05" value="1.35" />
+        </label>
+        <label class="slider">
+          <span>Brillo</span>
+          <input type="range" id="bloom" min="0" max="1.2" step="0.05" value="0.32" />
+        </label>
+        <label class="slider">
+          <span>Suavizado</span>
+          <input type="range" id="smooth" min="0.5" max="0.95" step="0.01" value="0.78" />
+        </label>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="group">
+        <div class="swatches" id="swatches" role="group" aria-label="Paleta"></div>
+        <button class="btn btn-icon" id="btnGuest" title="Invitado: segunda foto (G)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="8.5" r="2.6"/><path d="M16 13.6a5 5 0 0 1 4.5 5.4"/></svg>
+        </button>
+        <button class="btn btn-icon" id="btnAvatar" title="Avatar: convertir una foto en cubos (A)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M3 16l5-4 4 3 3.5-3 5.5 4.5"/><circle cx="8.5" cy="9.5" r="1.4"/></svg>
+        </button>
+        <button class="btn btn-icon" id="btnRotate" title="Órbita automática (O)" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4h-4"/></svg>
+        </button>
+        <button class="btn btn-icon" id="btnFull" title="Pantalla completa (F)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M20 9V4h-5M4 15v5h5"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="row progress-row" id="progressRow" hidden>
+      <span class="time" id="timeNow">0:00</span>
+      <div class="track" id="seek" role="slider" tabindex="0" aria-label="Posición del episodio"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="track-fill" id="seekFill"></div>
+      </div>
+      <span class="time" id="timeTotal">0:00</span>
+    </div>
+
+    <form class="row url-row" id="urlForm">
+      <svg class="url-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1 0l2.4-2.4a5 5 0 0 0-7.1-7.1L11 4.9"/><path d="M14 11a5 5 0 0 0-7.1 0L4.5 13.4a5 5 0 0 0 7.1 7.1l1.4-1.4"/></svg>
+      <input type="url" id="urlInput" inputmode="url" autocomplete="off" spellcheck="false"
+             placeholder="URL del episodio, stream o vídeo de YouTube…" />
+      <button class="btn btn-primary" type="submit" id="btnUrl">Cargar</button>
+    </form>
+    </div>
+    </div>
+    <p class="hint">Arrastra audio o una foto · <kbd>Espacio</kbd> play · <kbd>V</kbd> modo · <kbd>T</kbd> pestaña · <kbd>R</kbd> grabar · <kbd>U</kbd> menú · <kbd>H</kbd> ocultar interfaz · <kbd>F</kbd> pantalla completa</p>
+  </footer>
+
+  <div class="drop-overlay" id="dropOverlay"><div>Suelta un audio para visualizarlo · o una foto para convertirla en cubos</div></div>
+
+  <input type="file" id="fileInput" accept="audio/*" hidden />
+  <input type="file" id="avatarInput" accept="image/*" hidden />
+  <input type="file" id="guestInput" accept="image/*" hidden />
+  <audio id="player" crossorigin="anonymous"></audio>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
