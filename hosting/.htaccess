@@ -1,0 +1,45 @@
+# Cosecha Creativa — configuración para alojamiento compartido (Apache + PHP).
+# Se sube junto al resto del contenido, dentro de public_html.
+
+RewriteEngine On
+
+# HTTPS obligatorio. El micrófono y la captura de pestaña sólo funcionan en un
+# contexto seguro: por http:// el navegador ni siquiera pide permiso.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Las dos rutas de servidor que usa el cliente.
+RewriteRule ^proxy/?$ api/proxy.php [L,QSA]
+RewriteRule ^youtube/?$ api/youtube.php [L,QSA]
+
+# Los módulos ES necesitan un tipo MIME de JavaScript o el navegador los
+# rechaza sin cargarlos.
+<IfModule mod_mime.c>
+  AddType text/javascript .js
+  AddType text/javascript .mjs
+  AddType image/svg+xml .svg
+  AddType application/json .json
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/json image/svg+xml
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  # El HTML manda: si se cachea, un despliegue nuevo no llega hasta días después.
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType text/javascript "access plus 7 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/jpeg "access plus 30 days"
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  # La captura de pestaña y el micrófono se piden desde esta misma página.
+  Header set Permissions-Policy "microphone=(self), display-capture=(self)"
+</IfModule>
+

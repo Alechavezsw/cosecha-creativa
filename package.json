@@ -6,6 +6,7 @@
   "description": "Estudio de radio 3D reactivo al micrófono o a archivos de audio",
   "scripts": {
     "dev": "node server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "pack": "node scripts/pack.mjs"
   }
 }

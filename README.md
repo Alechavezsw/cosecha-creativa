@@ -24,6 +24,31 @@ Quedan el micrófono, archivos locales, pestaña, demo y el proxy de URLs.
 
 YouTube por URL necesita `yt-dlp` (sólo en local). En Vercel usá **Pestaña** (T).
 
+## Despliegue en Hostinger
+
+Hostinger compartido sirve Apache y PHP, no Node: `server.js` no arranca ahí. El
+paquete lleva las dos rutas de servidor reescritas a PHP.
+
+```bash
+npm run pack
+```
+
+Deja `dist/` armado y un `cosecha-creativa-hostinger.zip`. En hPanel entrá al
+**Administrador de archivos**, abrí `public_html`, subí el zip y extraelo ahí
+mismo. El `.htaccess` va incluido y hace tres cosas: fuerza HTTPS, manda `/proxy`
+y `/youtube` a `api/*.php` y pone el tipo MIME de los módulos ES.
+
+HTTPS no es opcional. El micrófono y la captura de pestaña sólo funcionan en
+contexto seguro, y por `http://` el navegador ni siquiera pide permiso. Activá el
+SSL gratuito en hPanel antes de probar.
+
+Queda todo menos YouTube por URL, que necesita `yt-dlp`: para eso está
+**Pestaña** (T). El proxy de URLs necesita que la cuenta tenga cURL activado, que
+es lo normal.
+
+Si en vez de compartido tenés un VPS, subí el repo entero y corré `npm start`
+detrás de un proxy inverso: ahí sí funciona `server.js` con yt-dlp.
+
 ## Fuentes de audio
 
 | Fuente | Cómo |
@@ -180,12 +205,15 @@ Los deslizadores ajustan **ganancia** (sensibilidad de entrada), **brillo** (blo
 ```
 index.html          Interfaz y mapa de importaciones de three.js
 server.js           Servidor estático + proxy de audio, sin dependencias
+scripts/pack.mjs    Empaqueta dist/ y el zip para alojamiento compartido
+hosting/            .htaccess y las rutas /proxy y /youtube en PHP
 src/app.js          Escena, modos, post-proceso y cableado de la interfaz
 src/audio.js        AnalyserNode, espectro logarítmico, bandas, golpes, demo
 src/studio.js       Sala: listones, escritorio, luces, cartel de aire y marcos
-src/mic3d.js        Micrófono de locución (fijo)
+src/mic3d.js        Micrófono de condensador colgado boca abajo de su brazo
+src/environment.js  Mapa de entorno para los reflejos de los metales
 src/waveDisplay.js  Onda de barras del monitor
-src/radio.js        Radio de válvulas con dial y aguja de vúmetro
+src/radio.js        Radio de válvulas: dial, aguja de vúmetro y ojo mágico
 src/recorder.js     Grabación de lienzo + audio a vídeo
 src/captions.js     Subtítulos en vivo
 src/avatar.js       Avatar vóxel: foto -> cubos reactivos

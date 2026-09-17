@@ -13,6 +13,7 @@ import { PodcastMic } from './mic3d.js';
 import { VintageRadio } from './radio.js';
 import { Recorder } from './recorder.js';
 import { Captions } from './captions.js';
+import { createStudioEnvironment } from './environment.js';
 
 /* ------------------------------------------------------------------ *
  *  Escena
@@ -31,6 +32,9 @@ renderer.toneMappingExposure = 1.08;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b0908);
+// Reflejos para los metales del micrófono. El resto del plató es Lambert y los
+// ignora; sin esto el cromo saldría negro por muchos focos que tuviera encima.
+scene.environment = createStudioEnvironment(renderer);
 scene.fog = new THREE.Fog(0x141110, 30, 96); // profundidad de sala, no de espacio
 
 const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 400);
@@ -1120,3 +1124,4 @@ controls.target.copy(MODES.voice.camera.target);
 
 render();
 toast('Pega la URL del episodio, pulsa «Micrófono» o suelta un archivo', 4200);
+
