@@ -543,6 +543,7 @@ const ui = {
   btnMic: document.getElementById('btnMic'),
   btnFile: document.getElementById('btnFile'),
   btnDemo: document.getElementById('btnDemo'),
+  btnMonitor: document.getElementById('btnMonitor'),
   btnTab: document.getElementById('btnTab'),
   btnAvatar: document.getElementById('btnAvatar'),
   btnGuest: document.getElementById('btnGuest'),
@@ -659,12 +660,17 @@ async function startMic() {
     ui.btnPlay.disabled = true;
     ui.btnStop.disabled = false;
     ui.sourceLabel.textContent = 'Micrófono en vivo';
-    toast('Micrófono activo · habla o pon música cerca');
+    toast(audio.monitorWanted
+      ? 'Micrófono al aire · OBS tiene que capturar el audio de Chrome, no el mic del sistema'
+      : 'Micrófono activo · para OBS pulsá «OBS» y usá auriculares');
   } catch (err) {
     const denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
+    const busy = err && err.name === 'NotReadableError';
     toast(denied
       ? 'Permiso de micrófono denegado. Actívalo desde el candado de la barra de direcciones.'
-      : `No se pudo abrir el micrófono: ${(err && err.message) || err}`, 4500);
+      : busy
+        ? 'El micrófono está ocupado, casi siempre por OBS. En OBS sacá o silenciá la fuente Mic/Aux y volvé a pulsar Micrófono.'
+        : `No se pudo abrir el micrófono: ${(err && err.message) || err}`, 5600);
   }
 }
 
@@ -942,8 +948,21 @@ function toggleDemo() {
   toast('Modo demo · pista generativa integrada');
 }
 
+function setMonitor(on, { silent = false } = {}) {
+  audio.setMonitor(on);
+  ui.btnMonitor.classList.toggle('active', on);
+  ui.btnMonitor.setAttribute('aria-pressed', String(on));
+  if (silent) return;
+  if (on) {
+    toast('Salida OBS activa. En OBS: capturá Chrome con «Captura de audio de aplicación» y silenciá Mic/Aux. Usá auriculares.', 7000);
+  } else {
+    toast('Salida OBS apagada · el micrófono ya no sale por los altavoces');
+  }
+}
+
 ui.btnMic.addEventListener('click', startMic);
 ui.btnDemo.addEventListener('click', toggleDemo);
+ui.btnMonitor.addEventListener('click', () => setMonitor(!audio.monitorWanted));
 ui.btnTab.addEventListener('click', startTabCapture);
 ui.btnAvatar.addEventListener('click', toggleAvatar);
 ui.btnGuest.addEventListener('click', toggleGuest);
@@ -1075,6 +1094,7 @@ addEventListener('keydown', (e) => {
       if (!ui.btnPlay.disabled) ui.btnPlay.click();
       break;
     case 'm': startMic(); break;
+    case 'n': setMonitor(!audio.monitorWanted); break;
     case 'd': toggleDemo(); break;
     case 't': startTabCapture(); break;
     case 'a': toggleAvatar(); break;
@@ -1123,5 +1143,8 @@ camera.position.copy(MODES.voice.camera.position);
 controls.target.copy(MODES.voice.camera.target);
 
 render();
+if (window.obsstudio || new URLSearchParams(location.search).has('obs')) {
+  setMonitor(true, { silent: true });
+}
 toast('Pega la URL del episodio, pulsa «Micrófono» o suelta un archivo', 4200);
 

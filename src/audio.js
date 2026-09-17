@@ -14,7 +14,8 @@ export class AudioEngine {
     this.analyser = null;
     this.source = null;
     this.stream = null;
-    this.kind = 'idle'; // 'idle' | 'mic' | 'file'
+    this.kind = 'idle'; // 'idle' | 'mic' | 'file' | 'tab' | 'demo'
+    this.monitorWanted = false;
 
     this.spectrum = new Float32Array(BAR_COUNT); // 0..1 suavizado
     this.peaks = new Float32Array(BAR_COUNT);
@@ -59,6 +60,13 @@ export class AudioEngine {
       // salida de grabación se captura cualquiera de ellas sin casos especiales.
       this.recordDestination = this.ctx.createMediaStreamDestination();
       this.analyser.connect(this.recordDestination);
+
+      // Salida a altavoces / OBS. Apagada en micrófono para no acoplar; el
+      // botón OBS la enciende para que «Captura de audio de aplicación» oiga.
+      this.monitor = this.ctx.createGain();
+      this.monitor.gain.value = 0;
+      this.analyser.connect(this.monitor);
+      this.monitor.connect(this.ctx.destination);
 
       // Un analizador por canal: con dos locutores en estéreo, el nivel de cada
       // lado dice quién está hablando.
@@ -109,20 +117,44 @@ export class AudioEngine {
     }
   }
 
+  _syncMonitor() {
+    if (!this.monitor) return;
+    const on = this.kind === 'file' || this.kind === 'demo'
+      || (this.monitorWanted && this.kind === 'mic');
+    this.monitor.gain.value = on ? 1 : 0;
+  }
+
+  setMonitor(on) {
+    this.monitorWanted = Boolean(on);
+    this._ensureContext();
+    this._syncMonitor();
+  }
+
   async useMicrophone() {
     const ctx = this._ensureContext();
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-      },
-    });
+    const constraints = {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+    };
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
+    } catch (err) {
+      // OBS u otra app a veces bloquean el dispositivo en exclusivo: reintento
+      // con el perfil por defecto, que Windows suele compartir.
+      if (err && (err.name === 'NotReadableError' || err.name === 'OverconstrainedError')) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } else {
+        throw err;
+      }
+    }
     this._disconnect();
     this.stream = stream;
     this.source = ctx.createMediaStreamSource(stream);
-    this.source.connect(this.analyser); // sin salida a altavoces: evita acoples
+    this.source.connect(this.analyser);
     this.kind = 'mic';
+    this._syncMonitor();
   }
 
   /**
@@ -155,6 +187,7 @@ export class AudioEngine {
       stream.getTracks().forEach((t) => t.addEventListener('ended', onEnded, { once: true }));
     }
     this.kind = 'tab';
+    this._syncMonitor();
   }
 
   useMediaElement(el) {
@@ -169,8 +202,8 @@ export class AudioEngine {
       this.source = this._elementSource;
     }
     this.source.connect(this.analyser);
-    this.analyser.connect(ctx.destination);
     this.kind = 'file';
+    this._syncMonitor();
   }
 
   /**
@@ -185,7 +218,6 @@ export class AudioEngine {
     const out = ctx.createGain();
     out.gain.value = 0.16;
     out.connect(this.analyser);
-    out.connect(ctx.destination);
 
     const noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const data = noise.getChannelData(0);
@@ -240,6 +272,7 @@ export class AudioEngine {
     tick();
     this._demo = { out, timer: setInterval(tick, 160) };
     this.kind = 'demo';
+    this._syncMonitor();
   }
 
   stopDemo() {
@@ -252,8 +285,8 @@ export class AudioEngine {
   stop() {
     this.stopDemo();
     this._disconnect();
-    if (this.analyser) { try { this.analyser.disconnect(); } catch { /* noop */ } }
     this.kind = 'idle';
+    this._syncMonitor();
   }
 
   _avg(data, [start, end]) {
